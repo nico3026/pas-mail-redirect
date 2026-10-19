@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opening email…</title>
+<style>
+  :root{
+    --bg:#f5f7f7; --fg:#10211f; --muted:#5b6f6d; --border:#d7e0df;
+    --accent:#0e7490; --accent-fg:#ffffff; --surface-2:#eef2f2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0c1615; --fg:#e7f1ef; --muted:#92a7a4; --border:#243836;
+      --accent:#4fb8d4; --accent-fg:#06282f; --surface-2:#192928;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,system-ui,sans-serif; background:var(--bg); color:var(--fg);
+    margin:0; padding:48px 20px; text-align:center;
+  }
+  .spinner{
+    width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--accent);
+    border-radius:50%; margin:0 auto 18px; animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  h1{font-size:1.1rem; margin:0 0 8px;}
+  p{font-size:.9rem; color:var(--muted); margin:0 0 24px; max-width:320px; margin-left:auto; margin-right:auto;}
+  .links{display:flex; flex-direction:column; gap:10px; max-width:280px; margin:0 auto;}
+  a.btn{
+    display:block; background:var(--accent); color:var(--accent-fg); text-decoration:none;
+    font-weight:700; padding:12px 20px; border-radius:10px; font-size:.95rem;
+  }
+  a.btn.secondary{background:var(--surface-2); color:var(--fg); border:1px solid var(--border);}
+</style>
+</head>
+<body>
+  <div class="spinner" id="spinner"></div>
+  <h1>Opening your email app…</h1>
+  <p>If it doesn't switch apps in a couple seconds, tap one of these instead:</p>
+  <div class="links" id="links"></div>
+
+<script>
+  // Reads ?to=&subject=&body= from the link the tracker sent you with,
+  // and builds the three ways to open this email: the Gmail app's own
+  // link, the standard Mail-app link, and Gmail on the web as a last
+  // resort. This page is a plain website (not an embedded Claude page),
+  // so — unlike inside the tracker — these links are allowed to actually
+  // switch apps here.
+  var params = new URLSearchParams(window.location.search);
+  var to = params.get('to') || '';
+  var subject = params.get('subject') || '';
+  var body = params.get('body') || '';
+
+  var mailtoUrl = 'mailto:' + encodeURIComponent(to) +
+    '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  var gmailAppUrl = 'googlegmail:///co?to=' + encodeURIComponent(to) +
+    '&subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  var gmailWebUrl = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=' + encodeURIComponent(to) +
+    '&su=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+
+  document.getElementById('links').innerHTML =
+    '<a class="btn" href="' + gmailAppUrl + '">Open in Gmail app</a>' +
+    '<a class="btn secondary" href="' + mailtoUrl + '">Open in Mail app</a>' +
+    '<a class="btn secondary" href="' + gmailWebUrl + '" target="_blank" rel="noopener">Gmail on the web</a>';
+
+  // Try the Gmail app first. If this tab is still visible shortly after
+  // (meaning nothing took over), try the Mail app next. Either way, the
+  // buttons above stay as a manual fallback — nothing beyond this is
+  // forced, and no automatic redirect to the web version, since that one
+  // should be a deliberate tap, not a surprise browser tab.
+  window.location.href = gmailAppUrl;
+  setTimeout(function(){
+    if(document.visibilityState !== 'hidden'){
+      window.location.href = mailtoUrl;
+    }
+  }, 900);
+</script>
+</body>
+</html>
