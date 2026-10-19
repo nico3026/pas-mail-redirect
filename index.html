@@ -37,17 +37,12 @@
 </head>
 <body>
   <div class="spinner" id="spinner"></div>
-  <h1>Opening your email app…</h1>
-  <p>If it doesn't switch apps in a couple seconds, tap one of these instead:</p>
+  <h1 id="msg">Opening your email…</h1>
+  <p id="hint">If it doesn't switch apps in a couple seconds, tap one of these instead:</p>
   <div class="links" id="links"></div>
 
 <script>
-  // Reads ?to=&subject=&body= from the link the tracker sent you with,
-  // and builds the three ways to open this email: the Gmail app's own
-  // link, the standard Mail-app link, and Gmail on the web as a last
-  // resort. This page is a plain website (not an embedded Claude page),
-  // so — unlike inside the tracker — these links are allowed to actually
-  // switch apps here.
+  // Reads ?to=&subject=&body= from the link the tracker sent you with.
   var params = new URLSearchParams(window.location.search);
   var to = params.get('to') || '';
   var subject = params.get('subject') || '';
@@ -60,22 +55,41 @@
   var gmailWebUrl = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=' + encodeURIComponent(to) +
     '&su=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 
-  document.getElementById('links').innerHTML =
-    '<a class="btn" href="' + gmailAppUrl + '">Open in Gmail app</a>' +
-    '<a class="btn secondary" href="' + mailtoUrl + '">Open in Mail app</a>' +
-    '<a class="btn secondary" href="' + gmailWebUrl + '" target="_blank" rel="noopener">Gmail on the web</a>';
+  // iPhone/iPad only — iPadOS 13+ reports itself as "Macintosh" in the
+  // user agent, so a touch-capable "Mac" is treated as an iPad, not a
+  // real Mac. Everything else (actual Macs, Windows, Linux, Android —
+  // anything without a native Gmail/Mail app scheme worth trying) goes
+  // straight to Gmail on the web instead of attempting an app hand-off
+  // that has nothing to catch it there.
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  // Try the Gmail app first. If this tab is still visible shortly after
-  // (meaning nothing took over), try the Mail app next. Either way, the
-  // buttons above stay as a manual fallback — nothing beyond this is
-  // forced, and no automatic redirect to the web version, since that one
-  // should be a deliberate tap, not a surprise browser tab.
-  window.location.href = gmailAppUrl;
-  setTimeout(function(){
-    if(document.visibilityState !== 'hidden'){
-      window.location.href = mailtoUrl;
-    }
-  }, 900);
+  if(isIOS){
+    document.getElementById('links').innerHTML =
+      '<a class="btn" href="' + gmailAppUrl + '">Open in Gmail app</a>' +
+      '<a class="btn secondary" href="' + mailtoUrl + '">Open in Mail app</a>' +
+      '<a class="btn secondary" href="' + gmailWebUrl + '" target="_blank" rel="noopener">Gmail on the web</a>';
+
+    // Try the Gmail app first. If this tab is still visible shortly after
+    // (meaning nothing took over), try the Mail app next. Either way, the
+    // buttons above stay as a manual fallback.
+    window.location.href = gmailAppUrl;
+    setTimeout(function(){
+      if(document.visibilityState !== 'hidden'){
+        window.location.href = mailtoUrl;
+      }
+    }, 900);
+  }else{
+    document.getElementById('msg').textContent = 'Opening Gmail…';
+    document.getElementById('hint').textContent = "If it doesn't open in a couple seconds, tap here instead:";
+    document.getElementById('links').innerHTML =
+      '<a class="btn" href="' + gmailWebUrl + '">Open Gmail</a>';
+
+    // On a computer, Gmail on the web *is* "the Gmail app" — no device
+    // scheme to try first, so this goes straight there.
+    window.location.href = gmailWebUrl;
+  }
 </script>
 </body>
 </html>
